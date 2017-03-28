@@ -1,1 +1,1 @@
-# hbase
+# HBase Puppet Module
