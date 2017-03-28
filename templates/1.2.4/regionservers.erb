@@ -1,0 +1,7 @@
+<% if @hbase_regionservers.nil? or @hbase_regionservers.empty? -%>
+localhost
+<% else -%>
+<% @hbase_regionservers.each do |rs| -%>
+<%= rs %>
+<% end -%>
+<% end -%>
