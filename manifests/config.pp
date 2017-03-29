@@ -1,4 +1,4 @@
-class hbase::config ( $hbase_version, $hbase_cluster, $hbase_role ) {
+class hbase::config ( $hbase_version, $hbase_cluster ) {
 
   $hbase_regionservers = query_nodes("hbase.installed=true and hbase.cluster=${hbase_cluster} and hbase.role='regionserver'")
 
@@ -20,12 +20,6 @@ class hbase::config ( $hbase_version, $hbase_cluster, $hbase_role ) {
   file { '/etc/hbase/conf/.cluster':
     ensure  => 'file',
     content => $hbase_cluster,
-    require => File['/etc/hbase/conf/'],
-  }
-
-  file { '/etc/hbase/conf/.role':
-    ensure  => 'file',
-    content => $hbase_role,
     require => File['/etc/hbase/conf/'],
   }
 

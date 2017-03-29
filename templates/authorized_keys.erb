@@ -1,7 +1,0 @@
-<% @hbase_rsa_2048_keys.sort.each do |key| -%>
-<% key.each do |value| -%>
-<% if value.is_a?(Hash) -%>
-<%= value['hbase_rsa_2048_key'] %>
-<% end -%>
-<% end -%>
-<% end -%>

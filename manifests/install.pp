@@ -1,11 +1,3 @@
-# You will get this response if there is not a valid checksum:
-#
-# Error 500 on SERVER:
-# Server Error: Evaluation
-# Error: Error while evaluating a Resource Statement
-#
-
-
 class hbase::install ( $hbase_version, $install_phoenix, $phoenix_version ) {
 
   $mirror = lookup( "mirrors.apache.${fqdn_rand(10)}" )
@@ -28,7 +20,7 @@ class hbase::install ( $hbase_version, $install_phoenix, $phoenix_version ) {
 
     if $install_phoenix == true {
 
-      class { 'hbase::phoenix::install':
+      class { 'phoenix':
         hbase_version   => $hbase_version,
         phoenix_version => $phoenix_version,
       }

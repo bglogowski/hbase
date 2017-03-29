@@ -1,68 +1,89 @@
-class hbase::users ( $hbase_cluster ) {
+define hbase::users ( $username, $hbase_cluster ) {
 
-  $hbase_rsa_2048_keys = query_facts("hbase.installed=true and hbase.cluster=${hbase_cluster}", ["hbase.rsa_2048_key"])
+  # $rsa_2048_keys = query_facts("hbase.installed=true and hbase.cluster=${hbase_cluster}", ["hbase.rsa_2048_keys.${username}"])
 
-  group { 'hbase':
+  $uid = inline_template("<%= (@username.chars.map{|c| c.ord}.inject(:+) + 5000) + (@username.chars.map{|c| c.ord.to_s}.join.to_i % 10000) %>")
+  $gid = $uid
+
+  group { $username:
     ensure => 'present',
-    gid    => '5000',
+    gid    => $gid,
   }
 
-  user { 'hbase':
+  user { $username:
     ensure   => 'present',
-    comment  => 'HBase Service User',
-    uid      => '5000',
-    gid      => '5000',
-    home     => '/home/hbase',
+    uid      => $uid,
+    gid      => $gid,
+    home     => "/home/${username}",
     password => '!',
     shell    => '/bin/bash',
-    require  => Group['hbase'],
+    require  => Group[$username],
   }
 
-  file { '/home/hbase/':
+  file { "/home/${username}/":
     ensure  => 'directory',
-    owner   => 'hbase',
-    group   => 'hbase',
+    owner   => $username,
+    group   => $username,
     mode    => '0750',
-    require => User['hbase'],
+    require => User[$username],
   }
 
-  file { '/home/hbase/.bashrc':
+  exec { "chown /home/${username}":
+    command     => "/bin/chown -R ${username}:${username} /home/${username}",
+    cwd         => '/home',
+    refreshonly => true,
+    subscribe   => File["/home/${username}"],
+    require     => File["/home/${username}"],
+  }
+
+  file { "/home/${username}/.bashrc":
     ensure  => 'present',
-    owner   => 'hbase',
-    group   => 'hbase',
+    owner   => $username,
+    group   => $username,
     mode    => '0755',
     backup  => false,
-    source  => "puppet:///modules/hbase/bashrc",
-    require => File['/home/hbase/'],
-  } ->
+    content => template("hbase/users/${username}/bashrc.erb"),
+    require => File["/home/${username}/"],
+  }
 
-  file { '/home/hbase/.bash_profile':
+  file { "/home/${username}/.bash_profile":
     ensure  => 'link',
-    target  => '/home/hbase/.bashrc',
-    require => File['/home/hbase/.bashrc'],
+    owner   => $username,
+    group   => $username,
+    target  => "/home/${username}/.bashrc",
+    require => File["/home/${username}/.bashrc"],
   }
 
-  file { '/home/hbase/.ssh/':
+  file { "/home/${username}/.ssh/":
     ensure  => 'directory',
-    owner   => 'hbase',
-    group   => 'hbase',
+    owner   => $username,
+    group   => $username,
     mode    => '0700',
-    require => File['/home/hbase/'],
+    require => File["/home/${username}/"],
   }
 
-  file { '/home/hbase/.ssh/authorized_keys':
+  file { "/home/${username}/.ssh/authorized_keys":
     ensure  => 'file',
-    owner   => 'hbase',
-    group   => 'hbase',
+    owner   => $username,
+    group   => $username,
     mode    => '0640',
-    content => template('hbase/authorized_keys.erb'),
-    require => File['/home/hbase/.ssh/'],
+    content => template("hbase/users/${username}/authorized_keys.erb"),
+    require => File["/home/${username}/.ssh/"],
   }
 
-  exec { 'hbase ssh-keygen':
-    command => '/bin/su -l hbase -c \'/usr/bin/ssh-keygen -t rsa -b 2048 -f /home/hbase/.ssh/id_rsa -N ""\'',
-    creates => '/home/hbase/.ssh/id_rsa',
-    require => File['/home/hbase/.ssh/'],
+
+  exec { "${username} ssh-keygen":
+    command => "/bin/su -l ${username} -c '/usr/bin/ssh-keygen -t rsa -b 2048 -f /home/${username}/.ssh/id_rsa -N \"\"'",
+    creates => "/home/${username}/.ssh/id_rsa",
+    require => File["/home/${username}/.ssh/"],
+  }
+
+  file { "/etc/security/limits.d/${username}.conf":
+    ensure  => 'file',
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0644',
+    content => template("hbase/users/${username}/limits.conf.erb"),
   }
 
 }
